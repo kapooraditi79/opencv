@@ -8,7 +8,7 @@ import numpy as np
 
 
 # generate 3d data. guassian normal distributions
-X,y= make_blobs(n_samples=47, centers=4,n_features=3, random_state=42, cluster_std=3)
+X,y= make_blobs(n_samples=50, centers=5,n_features=3, random_state=42, cluster_std=3)
  
 # returns a 2d arary with shape (47, 3) and a 1d array with shape (47,)
 
@@ -23,10 +23,10 @@ plt.show()
 scaler = StandardScaler()
 scaled_points = scaler.fit_transform(points)
 
-dbscan= DBSCAN(eps= 0.5, min_samples= 3)
+dbscan= DBSCAN(eps= 0.4, min_samples= 3)
 labels= dbscan.fit_predict(scaled_points)
 
-# analyzing results
+# analyzing results 
 # they are labelled as cluster IDs: -1 indicates noise
 unique_labels= set(labels)
 n_clusters= len(unique_labels)- (1 if -1 in labels else 0)
