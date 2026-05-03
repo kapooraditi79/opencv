@@ -23,7 +23,7 @@ plt.show()
 scaler = StandardScaler()
 scaled_points = scaler.fit_transform(points)
 
-dbscan= DBSCAN(eps= 0.4, min_samples= 3)
+dbscan= DBSCAN(eps= 0.5, min_samples= 3)
 labels= dbscan.fit_predict(scaled_points)
 
 # analyzing results 
