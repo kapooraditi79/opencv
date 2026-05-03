@@ -18,7 +18,7 @@ cv2.destroyAllWindows()
 
 # while True:
 #     ret, frame= cap.read()
-#     result= model(frame, classes=0)
+#     result= model.track(frame, classes=0)
 #     annotated_frame= result[0].plot()
 
 #     cv2.imshow('People Detection', annotated_frame)
