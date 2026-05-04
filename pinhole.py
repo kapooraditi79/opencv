@@ -1,14 +1,6 @@
-import sys
-sys.path.append(r'D:\Antares')  
 from PeopleDetection import detect_people
 from depthpro import get_depth_image, get_feet_depth
 import numpy as np 
-
-
-depth, focallength= get_depth_image('testImage/test6.png')
-person_boxes= detect_people('testImage/test6.png')
-feet_depths= get_feet_depth(depth, person_boxes)
-
 
 def pixel_to_3d(x_pixel, y_pixel, depth, fx, fy, cx, cy):
     X = (x_pixel - cx) * depth / fx
@@ -35,8 +27,11 @@ def get_3d_coordinates(person_boxes, feet_depths, focallength, depth):
     return position_3d
 
 if __name__=='__main__':
-    positions= get_3d_coordinates(person_boxes,feet_depths,focallength, depth)
-    for person_id, coords in positions.items():
+    depth, focallength= get_depth_image('testImage/test6.png')
+    person_boxes= detect_people('testImage/test6.png')
+    feet_depths= get_feet_depth(depth, person_boxes)
+    positions_3d= get_3d_coordinates(person_boxes,feet_depths,focallength, depth)
+    for person_id, coords in positions_3d.items():
         print(f"Person {person_id} → X: {coords[0]:.2f}m, Y: {coords[1]:.2f}m, Z: {coords[2]:.2f}m")
 
 

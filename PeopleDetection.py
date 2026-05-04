@@ -50,5 +50,5 @@ if __name__== '__main__':
     result= model(cap, classes=0)
     annotated_image= result[0].plot()
     cv2.imshow('People Detection', annotated_image)
-    cv2.waitkey(0)
+    cv2.waitKey(0)
     cv2.destroyAllWindows()
