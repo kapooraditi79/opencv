@@ -17,3 +17,5 @@ testVideo/
 understandingDepthPro.png
 checkpoints/
 x1y1x2y2.png
+__pycache__/
+
