@@ -1,4 +1,3 @@
-from sklearn.metrics._scorer import metric
 import sys
 sys.path.append(r'D:\Antares')  
 from pinhole import get_3d_coordinates
@@ -19,16 +18,15 @@ def get_distance(position_3d):
 
     # cluster
     clusters= DBSCAN(eps=0.8, min_samples=3,metric= 'precomputed')
-    labels= clusters.fit_predict(dist_matrix)    
+    labels= clusters.fit_predict(dist_matrix)  
+    labels_dict = {ids[i]: labels[i] for i in range(len(ids))}
 
     for i in range(len(ids)):
         for j in range(i+1, len(ids)):
             dist= dist_matrix[i][j]
             print(f"Person {ids[i]} <-> Person {ids[j]}: {dist:.2f}m")
     
-    print('Labels are: ', labels)
-    
-    return dist_matrix, ids, labels
+    return dist_matrix, ids, labels_dict
 
 
 if __name__=='__main__':
