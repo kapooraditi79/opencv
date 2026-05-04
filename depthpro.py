@@ -56,3 +56,5 @@ print("Mean depth:", np.mean(depth))
 # for some specific pixel
 y, x = 400, 500
 print(f"Depth at ({x},{y}):", depth[y][x], "meters")
+
+
