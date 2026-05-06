@@ -26,13 +26,13 @@ def get_3d_coordinates(person_boxes, feet_depths, focallength, depth):
     
     return position_3d
 
-if __name__=='__main__':
-    depth, focallength= get_depth_image('testImage/test6.png')
-    person_boxes= detect_people('testImage/test6.png')
-    feet_depths= get_feet_depth(depth, person_boxes)
-    positions_3d= get_3d_coordinates(person_boxes,feet_depths,focallength, depth)
-    for person_id, coords in positions_3d.items():
-        print(f"Person {person_id} → X: {coords[0]:.2f}m, Y: {coords[1]:.2f}m, Z: {coords[2]:.2f}m")
+# if __name__=='__main__':
+#     depth, focallength= get_depth_image('testImage/test6.png')
+#     person_boxes= detect_people('testImage/test6.png')
+#     feet_depths= get_feet_depth(depth, person_boxes)
+#     positions_3d= get_3d_coordinates(person_boxes,feet_depths,focallength, depth)
+#     for person_id, coords in positions_3d.items():
+#         print(f"Person {person_id} → X: {coords[0]:.2f}m, Y: {coords[1]:.2f}m, Z: {coords[2]:.2f}m")
 
 
 

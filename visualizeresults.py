@@ -31,11 +31,11 @@ def visualize(labels, person_boxes, image_path):
     cv2.imwrite('output_labeled.jpg', image_cv)
 
 
-if __name__ == '__main__':
-    image_path = 'testImage/test6.png'
-    depth, focallength = get_depth_image(image_path)
-    person_boxes = detect_people(image_path)
-    feet_depths = get_feet_depth(depth, person_boxes)
-    position_3d = get_3d_coordinates(person_boxes, feet_depths, focallength, depth)
-    dist_matrix, ids, labels = get_distance(position_3d)
-    visualize(labels, person_boxes, image_path)
+# if __name__ == '__main__':
+#     image_path = 'testImage/test6.png'
+#     depth, focallength = get_depth_image(image_path)
+#     person_boxes = detect_people(image_path)
+#     feet_depths = get_feet_depth(depth, person_boxes)
+#     position_3d = get_3d_coordinates(person_boxes, feet_depths, focallength, depth)
+#     dist_matrix, ids, labels = get_distance(position_3d)
+#     visualize(labels, person_boxes, image_path)
