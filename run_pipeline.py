@@ -94,11 +94,11 @@ if __name__ == '__main__':
     print(f"3D conversion: {time.time()-t4:.1f}s")
     
     # Step 5: Clustering (try multiple eps values)
-    for eps in [0.8, 1.2, 1.5, 2.0]:
-        labels = get_distance(position_3d, eps=eps, min_samples=4)
+    # for eps in [0.8, 1.2, 1.5, 2.0]:
+    labels = get_distance(position_3d, eps=eps, min_samples=4)
     
     # Step 6: Visualize with best eps
-    labels_final = get_distance(position_3d, eps=1.5, min_samples=4)
+    labels_final = get_distance(position_3d, eps=0.8, min_samples=4)
     visualize(labels_final, person_boxes, image_path)
     
     print(f"\nTotal pipeline time: {time.time()-start:.1f}s")
