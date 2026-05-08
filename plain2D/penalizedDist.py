@@ -8,6 +8,7 @@ model= YOLO('../yolov10s.pt')
 dist= {}
 h_ratios={}
 def extract_metrics(person_boxes):
+    # building dicts
     for i, boxes_i in person_boxes.items():
         x1,y1,x2,y2= boxes_i
 
@@ -17,7 +18,7 @@ def extract_metrics(person_boxes):
         h_i= (y2-y1)
         w_i= x2-x1
 
-        
+         
         for j, boxes_j in person_boxes.items():
             if j<=i:
                 continue
