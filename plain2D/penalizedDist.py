@@ -74,8 +74,21 @@ if __name__=="__main__":
     px_dist, h_ratios,total_boxes=extract_metrics(person_boxes)
     complete_penalized_map=get_penalized_dist(px_dist,h_ratios,total_boxes)
     print("Complete penalized distance map is: ")
+    # for k, dist_matrix in complete_penalized_map.items():
+    #     print(f"\n===== k = {k} =====")
+    #     print(np.round(dist_matrix, 3))
+
+    # for just making it look better
     for k, dist_matrix in complete_penalized_map.items():
         print(f"\n===== k = {k} =====")
-        print(np.round(dist_matrix, 3))
+        print("      ", end="")
+        for j in range(total_boxes):
+            print(f"P{j:>8}", end="")
+        print()
+        for i in range(total_boxes):
+            print(f"P{i:<4}", end="")
+            for j in range(total_boxes):
+                print(f"{dist_matrix[i][j]:8.2f}", end="")
+            print()
 
 
