@@ -1,13 +1,15 @@
 import math
+import sys
+sys.path.append(r'D:\Antares\plain2D')
 import cv2
 from yoloDetect import detect_people
 from ultralytics import YOLO
 
 model= YOLO('../yolov10s.pt')
 
-dist= {}
-h_ratios={}
 def extract_metrics(person_boxes):
+    px_dist= {}
+    h_ratios={}
     # building dicts
     for i, boxes_i in person_boxes.items():
         x1,y1,x2,y2= boxes_i
@@ -38,10 +40,37 @@ def extract_metrics(person_boxes):
 
             h_ratio= h_max/h_min
 
-            dist[(i,j)]=math.sqrt(dx**2 + dy**2)
+            px_dist[(i,j)]=math.sqrt(dx**2 + dy**2)
             h_ratios[(i,j)]= h_ratio
 
-    return dist, h_ratios
+    return px_dist, h_ratios
 
 
-def get_penalized_dist()
+def get_penalized_dist(px_dist, h_ratios):
+    k_vals=[0, 0.3, 0.5, 0.7, 1]
+    complete_penalized_dist_map={}
+
+    for j in range(len(k_vals)):
+        penalized_dist={}
+        for key,value in px_dist.items():
+            val1= h_ratios[key]**k_vals[j]
+            val2= px_dist[key]
+
+            penalized_dist[key]= val1*val2
+
+        complete_penalized_dist_map[k_vals[j]]=penalized_dist
+
+    return complete_penalized_dist_map
+
+
+if __name__=="__main__":
+    person_boxes, result= detect_people('../testImage/test6.png')
+    px_dist, h_ratios=extract_metrics(person_boxes)
+    complete_penalized_map=get_penalized_dist(px_dist,h_ratios)
+    print("Complete penalized distance map is: ")
+    for k, dist_map in complete_penalized_map.items():
+        print(f"\n===== k = {k} =====")
+        for pair, dist in dist_map.items():
+            print(f"{pair} -> {dist:.2f}")
+
+
