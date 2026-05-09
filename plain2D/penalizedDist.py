@@ -67,7 +67,7 @@ def get_penalized_dist(px_dist, h_ratios, total_boxes):
         complete_penalized_dist_map[k_vals[p]]=penalized_dist
 
     return complete_penalized_dist_map,k_vals
-
+ 
 
 if __name__=="__main__":
     person_boxes, result= detect_people('../testImage/test6.png')
