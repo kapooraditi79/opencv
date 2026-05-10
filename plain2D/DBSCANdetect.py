@@ -294,5 +294,5 @@ if __name__ == "__main__":
             labels = results[k][eps]
             draw_clusters(
                 IMAGE_PATH, person_boxes, labels, k, eps,
-                save_path=f'output_k{k}_eps{eps}.png'
+                save_path=f'outputImages/test_image6/output_k{k}_eps{eps}.png'
             )
