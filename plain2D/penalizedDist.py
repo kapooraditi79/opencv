@@ -6,8 +6,6 @@ from yoloDetect import detect_people
 from ultralytics import YOLO
 import numpy as np
 
-model= YOLO('../yolov10s.pt')
-
 def extract_metrics(person_boxes):
     px_dist= {}
     h_ratios={}
@@ -49,7 +47,8 @@ def extract_metrics(person_boxes):
 
 
 def get_penalized_dist(px_dist, h_ratios, total_boxes):
-    k_vals=[0, 0.3, 0.5, 0.7, 1]
+    # k_vals=[0, 0.3, 0.5, 0.7, 1]
+    k_vals=[0.5]
     complete_penalized_dist_map={}
 
     for p in range(len(k_vals)):

@@ -1,11 +1,17 @@
 import cv2;
 import numpy as np
 from ultralytics import YOLO
+import torch
 
 model= YOLO('../yolov10s.pt')
 
+device= torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+model.to(device)
+
+
 def detect_people(frame):
-    result= model(cap, classes=0)
+    result= model(frame, classes=0)
     detections= result[0].boxes
 
     if detections is None:
