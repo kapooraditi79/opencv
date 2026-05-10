@@ -12,8 +12,11 @@ import numpy as np
 
 video_path= r'..\testVideo\test1.mp4'
 filename = os.path.basename(video_path)
+os.makedirs("VidOutput", exist_ok=True)
 
 OUTPUT_PATH = os.path.join("VidOutput", filename)
+print("Saving to:", OUTPUT_PATH)
+
 
 k_val= 0.5
 eps=150
