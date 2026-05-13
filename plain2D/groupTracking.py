@@ -84,9 +84,7 @@ def match_groups(
 
             next_group_id += 1
 
-    # =====================================================
     # update active groups
-    # =====================================================
 
     for group_id, members in assigned_groups.items():
 
