@@ -1,3 +1,4 @@
+# file 2
 import math
 import sys
 sys.path.append(r'D:\Antares\plain2D')
@@ -17,9 +18,8 @@ def extract_metrics(person_boxes):
         b_yi= y2
         
         h_i= (y2-y1)
-        w_i= x2-x1
+        # w_i= x2-x1
 
-         
         for j, boxes_j in person_boxes.items():
             if j<=i:
                 continue
@@ -29,7 +29,6 @@ def extract_metrics(person_boxes):
             b_yj= y4
 
             h_j= (y4-y3)
-            w_j= x4-x3
 
             dx= c_xi-c_xj
             dy= b_yi-b_yj
@@ -44,7 +43,6 @@ def extract_metrics(person_boxes):
     
     total_boxes= len(person_boxes)
     return px_dist, h_ratios, total_boxes
-
 
 
 def get_penalized_dist(px_dist, h_ratios, total_boxes):
