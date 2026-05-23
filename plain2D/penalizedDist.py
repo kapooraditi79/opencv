@@ -45,9 +45,9 @@ def extract_metrics(person_boxes):
     return px_dist, h_ratios, total_boxes
 
 
-def get_penalized_dist(px_dist, h_ratios, total_boxes):
+def get_penalized_dist(px_dist, h_ratios, total_boxes, k_vals):
     # k_vals=[0, 0.3, 0.5, 0.7, 1]
-    k_vals=[0.5]
+    # k_vals=[0.5]
     complete_penalized_dist_map={}
 
     for p in range(len(k_vals)):
@@ -70,13 +70,15 @@ def get_penalized_dist(px_dist, h_ratios, total_boxes):
 if __name__=="__main__":
     person_boxes, result= detect_people('../testImage/test6.png')
     px_dist, h_ratios,total_boxes=extract_metrics(person_boxes)
-    complete_penalized_map,k_vals=get_penalized_dist(px_dist,h_ratios,total_boxes)
-    print("Complete penalized distance map is: ")
-    # for k, dist_matrix in complete_penalized_map.items():
-    #     print(f"\n===== k = {k} =====")
-    #     print(np.round(dist_matrix, 3))
+    print('length of px_dist is :', len(px_dist))
+    print("\nPixel Distances:\n")
 
-    # for just making it look better
+    for (i, j), dist in sorted(px_dist.items()):
+        print(f"{f'P{i} <-> P{j}':<15} | {dist:8.2f} px")
+
+    k_vals= [0.5]
+    complete_penalized_map,k_vals=get_penalized_dist(px_dist,h_ratios,total_boxes, k_vals=k_vals)
+    print("Complete penalized distance map is: ")
     for k, dist_matrix in complete_penalized_map.items():
         print(f"\n===== k = {k} =====")
         print("      ", end="")

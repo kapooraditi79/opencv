@@ -1,3 +1,4 @@
+# file 3
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -5,7 +6,7 @@ from sklearn.cluster import DBSCAN
 from yoloDetect import detect_people
 from penalizedDist import extract_metrics, get_penalized_dist
 import cv2
-import random
+# import random
 
 # Fixed colors for groups (expanded to 20)
 GROUP_COLORS = [
@@ -39,8 +40,8 @@ def run_dbscan(penalized_dist_map, k_vals, total_boxes, min_samples=3, eps_value
     Run DBSCAN across different k values AND eps values.
     Returns nested dict: result_map[k][eps] = cluster_labels
     """
-    if eps_values is None:
-        eps_values = [100, 150, 200, 250, 300]
+    # if eps_values is None:
+    #     eps_values = [100, 150, 200, 250, 300]
     
     results = {}
     
@@ -124,9 +125,34 @@ def draw_clusters(image_path, person_boxes, labels, k_val, eps_val, save_path=No
 
 def plot_distance_histogram(px_dist, h_ratios, penalized_dist_map, k_vals):
     """
-    Shows the distribution of penalized distances for each k value.
+    Shows the distribution of pairwise penalized distances for each k value.
     This helps you see where to set eps:
     - Set eps in the "valley" between noise pairs and group pairs
+
+    each bar here says--> how many person-pairs have a penalized distance in this range?
+    REMEMBER THIS IS FOR each PARTICULAR k_val 
+                                [used in penalized_dist= px_dist* (height_ratio)**k_val]
+    for lower vals-
+        - people are closer together
+        - similar apparant height
+        - likely same social group
+    
+    higher vals
+        - far apart
+        - depth mismatch
+        - unlikely same group
+
+
+
+    so now- it shows how many pair counts fall in that distance bucket?
+
+
+    This graph helps us choose eps val for the DBSCAN
+
+    - RULE: two points belong to the same cluster if the distance<=eps
+
+    to agar hum kamm distance choose krte hai y_axis se, 
+        to we are setting ki iss radius distance mei jitnae bhi log hai they all are a part of the same cluster
     """
     fig, axes = plt.subplots(1, len(k_vals), figsize=(5 * len(k_vals), 4))
     
@@ -153,11 +179,25 @@ def plot_distance_histogram(px_dist, h_ratios, penalized_dist_map, k_vals):
     plt.show()
 
 
-def plot_pair_scatter(px_dist, h_ratios, penalized_dist_map, k_vals, labels_map, eps_val=200):
+def plot_pair_scatter(px_dist, h_ratios, penalized_dist_map, k_vals, labels_map, eps_val=100):
     """
     Scatter plot: each pair is a point.
     X = pixel distance, Y = height ratio, Color = penalized distance
     Also annotates which pairs are clustered together at a specific eps.
+
+    Red dashed Curve-- DBSCAN acceptance boundary fr eps=200
+
+    d_px*(h_ratio)**k <= eps
+
+    - left/below the curve-- accepted by DBSCAN
+    -- right/above -- rejected
+
+    two people can be:
+        - far apart IF same depth
+        - OR same location IF depth mismatch is small
+
+        but far apart + huge depth mismatch-- unrelated people
+
     """
     # Build pair list
     pairs = []
@@ -260,16 +300,19 @@ if __name__ == "__main__":
     px_dist, h_ratios, total_boxes = extract_metrics(person_boxes)
     
     # Step 3: Compute penalized distance matrices for k values
-    k_vals = [0, 0.3, 0.5, 0.7, 1.0]
-    penalized_dist_map, _ = get_penalized_dist(px_dist, h_ratios, total_boxes)
+    # k_vals = [0, 0.3, 0.5, 0.7, 1.0]
+    k_vals=[0.5]
+    penalized_dist_map, _ = get_penalized_dist(px_dist, h_ratios, total_boxes, k_vals)
     
     # Step 4: Run DBSCAN across multiple k and eps values
-    eps_values = [100, 150, 200, 250, 300, 350, 400]
+    # eps_values = [100, 150, 200, 250, 300, 350, 400]
+    eps_values= [100,150,200]
     results, eps_values = run_dbscan(
         penalized_dist_map, k_vals, total_boxes,
         min_samples=3, eps_values=eps_values
     )
-    
+    print("result dekhegi DBSCAN KE?")
+    print(results)
     # Step 5: Visualizations
     
     # 5a: Summary table
@@ -284,9 +327,9 @@ if __name__ == "__main__":
     # 5d: Visualize clusters on the actual image for each (k, eps) combination
     # You can be selective here — maybe just the interesting ones
     critical_combos = [
-        (0, 150), (0, 200), (0, 250),
-        (0.5, 150), (0.5, 200), (0.5, 250),
-        (1.0, 150), (1.0, 200), (1.0, 250),
+        # (0, 150), (0, 200), (0, 250), 
+        (0.5,100), (0.5, 150), (0.5, 200),
+        # (1.0, 150), (1.0, 200), (1.0, 250),
     ]
     
     for k, eps in critical_combos:
@@ -296,3 +339,7 @@ if __name__ == "__main__":
                 IMAGE_PATH, person_boxes, labels, k, eps,
                 save_path=f'outputImages/test_image6/output_k{k}_eps{eps}.png'
             )
+
+
+
+# optimal-- k=0.5, eps=100
