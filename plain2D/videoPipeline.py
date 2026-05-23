@@ -11,7 +11,8 @@ import cv2
 import sys
 import os
 sys.path.append(r'D:\Antares\plain2D')
-from VidyoloDetect import detect_people
+# from VidyoloDetect import detect_people
+from PBVideopipeline import detect_people
 from penalizedDist import extract_metrics, get_penalized_dist
 from sklearn.cluster import DBSCAN
 # import numpy as np
