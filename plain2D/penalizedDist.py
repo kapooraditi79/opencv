@@ -3,7 +3,8 @@ import math
 import sys
 sys.path.append(r'D:\Antares\plain2D')
 import cv2
-from yoloDetect import detect_people
+# from yoloDetect import detect_people
+from VidyoloDetect import detect_people
 from ultralytics import YOLO
 import numpy as np
 
