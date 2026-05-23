@@ -95,6 +95,7 @@ if __name__ == '__main__':
     
     # Step 5: Clustering (try multiple eps values)
     # for eps in [0.8, 1.2, 1.5, 2.0]:
+    eps=1.2
     labels = get_distance(position_3d, eps=eps, min_samples=4)
     
     # Step 6: Visualize with best eps

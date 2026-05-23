@@ -20,3 +20,5 @@ x1y1x2y2.png
 __pycache__/
 extras/
 plain2D\__pycache__
+output_labeled.jpg
+image.png
