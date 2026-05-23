@@ -1,3 +1,11 @@
+# file 4
+# phase a- naive approch
+# contains
+    # flickering clusters
+    # label swapping
+    # group fragmentation
+    # intermittent detections
+    # unstable noise assignment
 import cv2
 # from ultralytics import YOLO
 import sys
@@ -16,8 +24,9 @@ OUTPUT_PATH = os.path.join("VidOutput", filename)
 print("Saving to:", OUTPUT_PATH)
 
 
-k_val= 0.5
-eps=150
+k_vals= [0.5]
+# eps=100
+eps=120
 min_sample=3
 
 GROUP_COLORS = [
@@ -74,8 +83,9 @@ while cap.isOpened():
         continue
 
     px_dist, h_ratios, total_boxes= extract_metrics(person_boxes)
-    complete_penalized_map, _=get_penalized_dist(px_dist, h_ratios, total_boxes)
-    dist_matrix= complete_penalized_map[k_val]
+    # k_vals=[0.5]
+    complete_penalized_map, _=get_penalized_dist(px_dist, h_ratios, total_boxes, k_vals=k_vals)
+    dist_matrix= complete_penalized_map[k_vals[0]]
 
     # now do DBSCAN
 
