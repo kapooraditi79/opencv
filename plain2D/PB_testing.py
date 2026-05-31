@@ -10,7 +10,7 @@ import numpy as np
 from PBVideoDetect import detect_people
 from PBpenalizedDist import extract_metrics, get_penalized_dist
 from sklearn.cluster import DBSCAN
-from PBgroupPersistance import PersistentGroupTracker  # Your Phase B class
+from PBgroupPersistance import PersistentGroupTracker 
 
 def process_frame(frame, tracker, current_frame, k_val=0.5, eps_val=100):
     """
@@ -167,7 +167,7 @@ def draw_tracking_results(frame, tracking_result, frame_number):
 if __name__ == "__main__":
     # For testing with a single image (simulate multiple frames)
     IMAGE_PATH = '../testImage/test6.png'
-    VIDEO_PATH = '../testVideo/test1.mp4'  # Replace with actual video path if available
+    VIDEO_PATH = '../testVideo/test2.mp4'  # Replace with actual video path if available
     
     # Initialize tracker (assuming 30 fps for image test)
     tracker = PersistentGroupTracker(fps=30)
@@ -202,6 +202,14 @@ if __name__ == "__main__":
         
         cap.release()
         cv2.destroyAllWindows()
+
+        print("\n\n")
+        print("=" * 60)
+        print("GROUP HISTORY REPORT")
+        print("=" * 60)
+        
+        # Option 1: Pretty-print all groups
+        tracker.print_history()
     
     else:
         # Test with static image - simulate multiple frames by reusing same image

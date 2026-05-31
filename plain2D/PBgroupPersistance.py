@@ -554,3 +554,115 @@ class PersistentGroupTracker:
             "track_boxes": track_boxes  # Passthrough for display
         }
     
+    def get_history(self, group_id: Optional[int] = None) -> Dict:
+        """
+        Retrieve history for one or all groups.
+        
+        Args:
+            group_id: Specific group ID to query, or None for all groups
+        
+        Returns:
+            Dict with structure:
+            {
+                group_id: {
+                    "status": "confirmed" | "pending" | "inactive" | "historical",
+                    "confirmed": bool,
+                    "active": bool,
+                    "created_at": frame_number,
+                    "first_confirmed_at": frame_number or None,
+                    "last_seen": frame_number,
+                    "total_frames_tracked": int (len of history),
+                    "member_size_range": (min, max),
+                    "history": [(frame, member_count), ...],
+                    "color": (R, G, B) or None
+                }
+            }
+        """
+        if group_id is not None:
+            # Single group query
+            if group_id not in self.groups:
+                return {"error": f"Group {group_id} not found"}
+            return {group_id: self._format_history_entry(group_id)}
+        
+        # All groups
+        result = {}
+        for gid in self.groups:
+            result[gid] = self._format_history_entry(gid)
+        return result
+
+
+    def _format_history_entry(self, group_id: int) -> Dict:
+        """Format a single group's history into a readable structure."""
+        group = self.groups[group_id]
+        
+        # Determine status
+        if group["confirmed"] and group["active"]:
+            status = "confirmed_active"
+        elif group["confirmed"] and not group["active"]:
+            status = "inactive"
+        elif not group["confirmed"] and group["active"]:
+            status = "pending"
+        else:
+            status = "historical"
+        
+        # Compute member size range over history
+        history = group.get("history", [])
+        if history:
+            sizes = [entry[1] for entry in history]
+            size_range = (min(sizes), max(sizes))
+        else:
+            size_range = (0, 0)
+        
+        return {
+            "status": status,
+            "confirmed": group["confirmed"],
+            "active": group["active"],
+            "created_at": group["created_at"],
+            "first_confirmed_at": group["first_confirmed_at"],
+            "last_seen": group["last_seen"],
+            "total_frames_tracked": len(history),
+            "member_size_range": size_range,
+            "history": history.copy(),
+            "color": group.get("color")
+        }
+
+
+    def print_history(self, group_id: Optional[int] = None):
+        """
+        Pretty-print history to console.
+        
+        Args:
+            group_id: Specific group to print, or None for all groups
+        """
+        data = self.get_history(group_id)
+        
+        if "error" in data:
+            print(data["error"])
+            return
+        
+        for gid, info in data.items():
+            print(f"\n{'='*60}")
+            print(f"Group {gid}")
+            print(f"{'='*60}")
+            print(f"  Status:           {info['status']}")
+            print(f"  Confirmed:        {info['confirmed']}")
+            print(f"  Created at frame: {info['created_at']}")
+            if info['first_confirmed_at']:
+                print(f"  Confirmed at:     {info['first_confirmed_at']}")
+            print(f"  Last seen:        {info['last_seen']}")
+            print(f"  Frames tracked:   {info['total_frames_tracked']}")
+            print(f"  Member range:     {info['member_size_range'][0]} - {info['member_size_range'][1]}")
+            print(f"  Color:            {info['color']}")
+            print(f"  History (frame, size):")
+            
+            history = info["history"]
+            if len(history) <= 20:
+                # Print all for short histories
+                for frame, size in history:
+                    print(f"    Frame {frame:5d}: {size} members")
+            else:
+                # Summarize for long histories
+                print(f"    ... {len(history)} entries total ...")
+                print(f"    First: Frame {history[0][0]} - {history[0][1]} members")
+                print(f"    Last:  Frame {history[-1][0]} - {history[-1][1]} members")
+                print(f"    (Use get_history({gid}) for full data)")
