@@ -22,7 +22,6 @@ class PersistentGroupTracker:
                 jaccard_threshold: float = 0.5,
                 min_active_threshold: float=0.5,        # the group needs to be seen for this many consecutive/matched frames to be confirmed
                 max_inactive_threshold: float=2.0,      # confirmed group can go unseen for this long before being deactivated
-                grace_display_second: float= 1.0,       # after deactivation, confirmed groups will look fading for this long
                 start_group_id: int=100,                
                 pending_inactive_threshold: float=1.5):     # a pending group dies faster than confirmed group.
         
@@ -31,7 +30,6 @@ class PersistentGroupTracker:
         self.jaccard_threshold= jaccard_threshold
         self.min_active_frames= int(min_active_threshold * fps)
         self.max_inactive_frames= int(max_inactive_threshold* fps)
-        self.grace_display_frames= int(grace_display_second* fps)
         self.PENDING_COLOR = (128, 128, 128)
         self.pending_max_inactive_frames = int(pending_inactive_threshold * fps)
         self.debug= False
@@ -82,18 +80,6 @@ class PersistentGroupTracker:
             for gid, group in self.groups.items()
             if group["active"] and not group["confirmed"]
         }
-
-    def _is_in_grace_period(self,group:dict, current_frame: int)->bool:
-        """
-        returns the fading[confirmed-but-now-inactive] groups. will have a fading color
-        """
-        if group['active']:
-            return False        # not inactive, no grace
-        if not group['confirmed']:
-            return False
-        
-        frames_inactive= current_frame-group['last_seen']
-        return frames_inactive<=(self.max_inactive_frames + self.grace_display_frames)
 
     def _build_clusters_from_labels(self, track_cluster_map:dict[int, int])-> list[set[int]]:
         """
@@ -249,32 +235,26 @@ Also handles the pending->confirmed transition..
         """
         Assign a unique color to a newly confirmed group.
         
-        Strategy:
-        1. Get all colors currently used by active+grace groups
+        1. Get all colors currently used by active+confirmed groups
         2. Pick first palette color not in use
         3. If all colors in use, recycle the oldest active group's color
         
         Args:
             group_id: The group to assign color to
-            current_frame: Current frame number (for grace period check)
+            current_frame: Current frame number 
         
         Returns:
             RGB tuple
         """
-        # Get colors of all currently active or in-grace groups
+        # Get colors of all currently active groups
         used_colors = set()
         
         for gid, group in self.groups.items():
             if group.get("color") is None:
                 continue
             
-            # Check if this group is active OR in grace period
-            is_active = group["active"]
-            is_grace = (not is_active and 
-                       group["confirmed"] and 
-                       self._is_in_grace_period(group, current_frame))
-            
-            if is_active or is_grace:
+            # Check if this group is active 
+            if group["active"] and group["confirmed"]:
                 used_colors.add(group["color"])
         
         # Find first unused color
@@ -284,21 +264,17 @@ Also handles the pending->confirmed transition..
         
         # All colors in use - recycle oldest active group's color
         # Find active group with smallest last_seen (oldest)
-        recyclable_groups = [
+        inactive_confirmed = [
         (gid, g)
         for gid, g in self.groups.items()
         if (
-            not g["active"]
-            and not self._is_in_grace_period(g, current_frame)
+            not g["active"] and g['confirmed']
             and g.get("color") is not None
     )
 ]
-        if recyclable_groups:
-            oldest_gid = min(recyclable_groups, key=lambda x: x[1]["last_seen"])[0]
-            recycled_color = self.groups[oldest_gid]["color"]
-            print(f"[Warning] Color palette exhausted. Recycling color {recycled_color} "
-                  f"from group {oldest_gid} for group {group_id}")
-            return recycled_color
+        if inactive_confirmed:
+            oldest_gid = min(inactive_confirmed, key=lambda x: x[1]["last_seen"])[0]
+            return self.groups[oldest_gid]["color"]
         
         # Fallback (should never happen)
         return self.palette[group_id % len(self.palette)]
@@ -378,30 +354,24 @@ Also handles the pending->confirmed transition..
         
         Returns dict with:
             - active_groups: Confirmed + active (solid borders, full opacity)
-            - grace_groups: Confirmed + inactive but within grace period (fading)
             - pending_groups: Not yet confirmed (dashed borders)
         """
         active_groups = {}
-        grace_groups = {}
         pending_groups = {}
         
         for group_id, group in self.groups.items():
-            # Skip historical groups (inactive and beyond grace period)
-            if not group["active"] and not self._is_in_grace_period(group, current_frame):
+            # Skip historical groups (inactive)
+            if not group["active"]:
                 continue
             
             if not group["confirmed"]:
-                # Pending group (active but not confirmed)
-                if group["active"]:
-                    pending_groups[group_id] = {
-                        "members": group["members"],
-                        "age_frames": current_frame - group["created_at"]+1,
-                        "age_seconds": (current_frame - group["created_at"]+1) / self.fps,
-                        "color": self.PENDING_COLOR
-                    }
-            
-            elif group["active"]:
-                # Active + Confirmed
+                pending_groups[group_id] = {
+                    "members": group["members"],
+                    "age_frames": current_frame - group["created_at"] + 1,
+                    "age_seconds": (current_frame - group["created_at"] + 1) / self.fps,
+                    "color": self.PENDING_COLOR
+                }
+            else:
                 active_groups[group_id] = {
                     "members": group["members"],
                     "color": group["color"],
@@ -409,26 +379,9 @@ Also handles the pending->confirmed transition..
                     "age_seconds": (current_frame - group["first_confirmed_at"]) / self.fps,
                     "member_count": len(group["members"])
                 }
-            
-            elif self._is_in_grace_period(group, current_frame):
-                # Inactive but in grace period (fading)
-                frames_inactive = current_frame - group["last_seen"]
-                grace_progress = frames_inactive - self.max_inactive_frames
-                
-                # Calculate opacity: 1.0 at start of grace, 0.0 at end
-                opacity = 1.0 - (grace_progress / self.grace_display_frames)
-                opacity = max(0.0, min(1.0, opacity))
-                
-                grace_groups[group_id] = {
-                    "members": group["members"],
-                    "color": group["color"],
-                    "opacity": opacity,
-                    "inactive_seconds": frames_inactive / self.fps
-                }
-        
+
         return {
             "active_groups": active_groups,
-            "grace_groups": grace_groups,
             "pending_groups": pending_groups
         }
 
@@ -449,7 +402,6 @@ Also handles the pending->confirmed transition..
             Dictionary with:
                 - person_groups: {track_id: group_id or None}
                 - active_groups: Display info for active confirmed groups
-                - grace_groups: Display info for fading groups
                 - pending_groups: Display info for unconfirmed groups
                 - events: List of events this frame
                 - track_boxes: Original boxes (passthrough for display)
@@ -485,7 +437,6 @@ Also handles the pending->confirmed transition..
             remaining_clusters,
             pending_groups
         )
-
 
         # Convert local indices back to original cluster indices
         pending_matches = []
@@ -542,54 +493,25 @@ Also handles the pending->confirmed transition..
         return {
             "person_groups": person_groups,
             "active_groups": display_groups["active_groups"],
-            "grace_groups": display_groups["grace_groups"],
             "pending_groups": display_groups["pending_groups"],
             "events": events,
             "track_boxes": track_boxes  # Passthrough for display
         }
     
     def get_history(self, group_id: Optional[int] = None) -> Dict:
-        """
-        Retrieve history for one or all groups.
-        
-        Args:
-            group_id: Specific group ID to query, or None for all groups
-        
-        Returns:
-            Dict with structure:
-            {
-                group_id: {
-                    "status": "confirmed" | "pending" | "inactive" | "historical",
-                    "confirmed": bool,
-                    "active": bool,
-                    "created_at": frame_number,
-                    "first_confirmed_at": frame_number or None,
-                    "last_seen": frame_number,
-                    "total_frames_tracked": int (len of history),
-                    "member_size_range": (min, max),
-                    "history": [(frame, member_count), ...],
-                    "color": (R, G, B) or None
-                }
-            }
-        """
         if group_id is not None:
-            # Single group query
             if group_id not in self.groups:
                 return {"error": f"Group {group_id} not found"}
             return {group_id: self._format_history_entry(group_id)}
-        
-        # All groups
+
         result = {}
         for gid in self.groups:
             result[gid] = self._format_history_entry(gid)
         return result
 
-
     def _format_history_entry(self, group_id: int) -> Dict:
-        """Format a single group's history into a readable structure."""
         group = self.groups[group_id]
-        
-        # Determine status
+
         if group["confirmed"] and group["active"]:
             status = "confirmed_active"
         elif group["confirmed"] and not group["active"]:
@@ -598,16 +520,16 @@ Also handles the pending->confirmed transition..
             status = "pending"
         else:
             status = "historical"
-        
-        # Compute member size range over history
+
         history = group.get("history", [])
         if history:
             sizes = [entry[1] for entry in history]
             size_range = (min(sizes), max(sizes))
         else:
             size_range = (0, 0)
-        
+
         return {
+            "group_id": group_id,
             "status": status,
             "confirmed": group["confirmed"],
             "active": group["active"],
@@ -620,43 +542,44 @@ Also handles the pending->confirmed transition..
             "color": group.get("color")
         }
 
+    def export_history_json(self, output_path: str = "group_history.json"):
+        """
+        Export complete group history to a JSON file.
+        Only confirmed groups are included.
+        """
+        data = self.get_history()
+        export = {}
+        for gid, info in data.items():
+            if info["confirmed"]:
+                # Convert tuple color to list for JSON serialization
+                info_copy = info.copy()
+                if info_copy["color"]:
+                    info_copy["color"] = list(info_copy["color"])
+                export[str(gid)] = info_copy
+
+        os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else ".", exist_ok=True)
+
+        with open(output_path, 'w') as f:
+            json.dump(export, f, indent=2)
+
+        print(f"History exported to {output_path}  ({len(export)} confirmed groups)")
 
     def print_history(self, group_id: Optional[int] = None):
-        """
-        Pretty-print history to console.
-        
-        Args:
-            group_id: Specific group to print, or None for all groups
-        """
+        """Minimal console summary — one line per group."""
         data = self.get_history(group_id)
-        
+
         if "error" in data:
             print(data["error"])
             return
-        
+
+        confirmed = 0
         for gid, info in data.items():
-            print(f"\n{'='*60}")
-            print(f"Group {gid}")
-            print(f"{'='*60}")
-            print(f"  Status:           {info['status']}")
-            print(f"  Confirmed:        {info['confirmed']}")
-            print(f"  Created at frame: {info['created_at']}")
-            if info['first_confirmed_at']:
-                print(f"  Confirmed at:     {info['first_confirmed_at']}")
-            print(f"  Last seen:        {info['last_seen']}")
-            print(f"  Frames tracked:   {info['total_frames_tracked']}")
-            print(f"  Member range:     {info['member_size_range'][0]} - {info['member_size_range'][1]}")
-            print(f"  Color:            {info['color']}")
-            print(f"  History (frame, size):")
-            
-            history = info["history"]
-            if len(history) <= 20:
-                # Print all for short histories
-                for frame, size in history:
-                    print(f"    Frame {frame:5d}: {size} members")
-            else:
-                # Summarize for long histories
-                print(f"    ... {len(history)} entries total ...")
-                print(f"    First: Frame {history[0][0]} - {history[0][1]} members")
-                print(f"    Last:  Frame {history[-1][0]} - {history[-1][1]} members")
-                print(f"    (Use get_history({gid}) for full data)")
+            if info["confirmed"]:
+                confirmed += 1
+                print(f"G{gid}: {info['status']} | "
+                      f"frames {info['created_at']}-{info['last_seen']} | "
+                      f"members {info['member_size_range'][0]}-{info['member_size_range'][1]} | "
+                      f"color {info['color']}")
+
+        print(f"\nTotal: {len(data)} groups ({confirmed} confirmed, "
+              f"{len(data) - confirmed} pending/historical)")

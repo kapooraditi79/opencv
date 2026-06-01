@@ -32,13 +32,12 @@ def process_frame(frame, tracker, current_frame, k_val=0.5, eps_val=100):
     start= time.time()
     
     if not person_boxes:
-        return {
-            "person_groups": {},
-            "track_boxes": {},
-            "active_groups": {},
-            "grace_groups": {},
-            "pending_groups": {}
-        }
+        return tracker.update(
+        track_cluster_map={},
+        track_boxes={},
+        current_frame=current_frame
+        )
+        
     
     # Step 2: Extract metrics for DBSCAN
     px_dist, h_ratios, total_boxes, track_ids, id_to_idx = extract_metrics(person_boxes)
@@ -70,96 +69,144 @@ def process_frame(frame, tracker, current_frame, k_val=0.5, eps_val=100):
 def draw_tracking_results(frame, tracking_result, frame_number):
     """
     Draw bounding boxes with persistent group colors.
-    
+
     Args:
         frame: Image frame
         tracking_result: Output from PersistentGroupTracker.update()
         frame_number: Frame number for display
-    
+
     Returns:
         Annotated frame
     """
-    annotated = frame
-    
+    annotated = frame.copy()
+
     # Get data from tracking result
-    person_groups = tracking_result["person_groups"]  # track_id → group_id or None
-    active_groups = tracking_result["active_groups"]  # group_id → display info
-    grace_groups = tracking_result["grace_groups"]    # group_id → fading info
-    pending_groups = tracking_result["pending_groups"] # group_id → pending info
-    track_boxes = tracking_result["track_boxes"]      # track_id → [x1,y1,x2,y2]
-    
-    # Create reverse mapping: group_id → color
-    group_colors = {}
-    for gid, info in active_groups.items():
-        group_colors[gid] = info["color"]
-    for gid, info in grace_groups.items():
-        # For grace groups, apply fading
-        color = info["color"]
-        opacity = info["opacity"]
-        group_colors[gid] = tuple(int(c * opacity) for c in color)
-    
+    person_groups = tracking_result.get("person_groups", {})
+    active_groups = tracking_result.get("active_groups", {})
+    pending_groups = tracking_result.get("pending_groups", {})
+    track_boxes = tracking_result.get("track_boxes", {})
+
     # Draw each person
     for track_id, box in track_boxes.items():
-        x1, y1, x2, y2 = [int(coord) for coord in box]
+
+        x1, y1, x2, y2 = map(int, box)
+
+        # Skip invalid boxes
+        if x2 <= x1 or y2 <= y1:
+            continue
+
         group_id = person_groups.get(track_id)
-        
+
         # Determine color and style
         if group_id is None:
-            # Noise - gray
             color = (180, 180, 180)
             thickness = 1
             linetype = cv2.LINE_AA
             label = "Noise"
+
         elif group_id in active_groups:
-            # Active confirmed group
-            color = group_colors[group_id]
+            color = active_groups[group_id]["color"]
             thickness = 2
             linetype = cv2.LINE_AA
-            label = f"G{group_id}({active_groups[group_id]['member_count']})"
-        elif group_id in grace_groups:
-            # Grace period (fading)
-            color = group_colors[group_id]
-            thickness = 2
-            linetype = cv2.LINE_AA
-            label = f"G{group_id}(fading)"
+
+            member_count = active_groups[group_id].get(
+                "member_count",
+                len(active_groups[group_id].get("members", []))
+            )
+
+            label = f"G{group_id}({member_count})"
+
         elif group_id in pending_groups:
-            # Pending group - dashed border
             color = (128, 128, 128)
             thickness = 1
             linetype = cv2.LINE_AA
             label = "?"
+
         else:
-            # Fallback
             color = (100, 100, 100)
             thickness = 1
             linetype = cv2.LINE_AA
             label = f"G{group_id}"
-        
+
         # Draw rectangle
-        cv2.rectangle(annotated, (x1, y1), (x2, y2), color, thickness, linetype)
-        
-        # Draw label background
-        (label_w, label_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-        cv2.rectangle(annotated, (x1, y1 - label_h - 5), (x1 + label_w, y1), color, -1)
-        
-        # Draw label text
-        cv2.putText(annotated, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-    
-    # Add frame info
-    cv2.putText(annotated, f"Frame: {frame_number}", (10, 30), 
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-    
-    # Add group statistics
+        cv2.rectangle(
+            annotated,
+            (x1, y1),
+            (x2, y2),
+            color,
+            thickness,
+            linetype
+        )
+
+        # Label size
+        (label_w, label_h), baseline = cv2.getTextSize(
+            label,
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            1
+        )
+
+        # Keep label inside image
+        label_top = max(0, y1 - label_h - 5)
+
+        # Label background
+        cv2.rectangle(
+            annotated,
+            (x1, label_top),
+            (x1 + label_w + 4, y1),
+            color,
+            -1
+        )
+
+        # Label text position
+        text_y = max(label_h, y1 - 5)
+
+        cv2.putText(
+            annotated,
+            label,
+            (x1 + 2, text_y),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (255, 255, 255),
+            1
+        )
+
+    # Frame number
+    cv2.putText(
+        annotated,
+        f"Frame: {frame_number}",
+        (10, 30),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (255, 255, 255),
+        2
+    )
+
+    # Statistics
     y_offset = 60
-    cv2.putText(annotated, f"Active Groups: {len(active_groups)}", (10, y_offset), 
-                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+
+    cv2.putText(
+        annotated,
+        f"Active Groups: {len(active_groups)}",
+        (10, y_offset),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (255, 255, 255),
+        1
+    )
+
     y_offset += 25
-    cv2.putText(annotated, f"Grace Groups: {len(grace_groups)}", (10, y_offset), 
-                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
-    y_offset += 25
-    cv2.putText(annotated, f"Pending Groups: {len(pending_groups)}", (10, y_offset), 
-                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
-    
+
+    cv2.putText(
+        annotated,
+        f"Pending Groups: {len(pending_groups)}",
+        (10, y_offset),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (255, 255, 255),
+        1
+    )
+
     return annotated
 
 
