@@ -458,12 +458,6 @@ Also handles the pending->confirmed transition..
         
         # Step 1: Convert DBSCAN labels to cluster sets
         current_clusters = self._build_clusters_from_labels(track_cluster_map)
-        
-        # # Step 2: Get eligible groups for matching
-        # eligible_groups = self._get_eligible_groups()
-        
-        # # Step 3: Match current clusters to existing groups
-        # matches = self._match_clusters_to_groups(current_clusters, eligible_groups)
 
         # Stage 1: confirmed groups get priority
         confirmed_groups = self._get_active_confirmed_groups()
@@ -480,34 +474,29 @@ Also handles the pending->confirmed transition..
         remaining_cluster_map = {}
 
         for idx, cluster in enumerate(current_clusters):
-
             if idx not in matched_cluster_indices:
-
                 remaining_cluster_map[len(remaining_clusters)] = idx
                 remaining_clusters.append(cluster)
 
+
         # Stage 2: pending groups match remaining clusters
         pending_groups = self._get_active_pending_groups()
-
         pending_matches_local = self._match_clusters_to_groups(
             remaining_clusters,
             pending_groups
         )
 
+
         # Convert local indices back to original cluster indices
         pending_matches = []
-
         for local_idx, group_id, score in pending_matches_local:
-
             original_idx = remaining_cluster_map[local_idx]
-
             pending_matches.append(
                 (original_idx, group_id, score)
             )
 
         # Final combined matches
         matches = confirmed_matches + pending_matches
-
         matched_cluster_indices = {m[0] for m in matches}
         matched_group_ids = {m[1] for m in matches}
 
