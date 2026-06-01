@@ -59,7 +59,7 @@ def get_penalized_dist(px_dist, h_ratios, total_boxes, k_vals):
     # k_vals=[0, 0.3, 0.5, 0.7, 1]
     # k_vals=[0.5]
     complete_penalized_dist_map={}
-
+    # k-> how heavily we can penalize the depth mismatch betw peeps
     for p in range(len(k_vals)):
         
         penalized_dist= np.zeros((total_boxes, total_boxes))

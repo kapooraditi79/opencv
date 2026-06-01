@@ -43,6 +43,9 @@ def run_dbscan(penalized_dist_map, k_vals, total_boxes, min_samples=3, eps_value
     """
     # if eps_values is None:
     #     eps_values = [100, 150, 200, 250, 300]
+
+    # eps- optimal distance to be considered as neighbors
+    # k-> how heavily we can penalize the depth mismatch betw peeps
     
     results = {}
     
@@ -64,9 +67,9 @@ def run_dbscan(penalized_dist_map, k_vals, total_boxes, min_samples=3, eps_value
 
 def draw_clusters(image_path, person_boxes, labels, k_val, eps_val, save_path=None, track_ids=[], id_to_idx={}):
     """
-    Draw bounding boxes color-coded by group membership.
-    Also labels each person with their group ID.
+    drawing the coloured bounded boxes which shows what group each person belongs to.
     """
+    # loading the image
     image = cv2.imread(image_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # for matplotlib
     
@@ -128,11 +131,11 @@ def draw_clusters(image_path, person_boxes, labels, k_val, eps_val, save_path=No
 def plot_distance_histogram(px_dist, h_ratios, penalized_dist_map, k_vals):
     """
     Shows the distribution of pairwise penalized distances for each k value.
-    This helps you see where to set eps:
+    This helps see where to set eps:
     - Set eps in the "valley" between noise pairs and group pairs
 
     each bar here says--> how many person-pairs have a penalized distance in this range?
-    REMEMBER THIS IS FOR each PARTICULAR k_val 
+    THIS IS FOR each PARTICULAR k_val 
                                 [used in penalized_dist= px_dist* (height_ratio)**k_val]
     for lower vals-
         - people are closer together
@@ -143,8 +146,6 @@ def plot_distance_histogram(px_dist, h_ratios, penalized_dist_map, k_vals):
         - far apart
         - depth mismatch
         - unlikely same group
-
-
 
     so now- it shows how many pair counts fall in that distance bucket?
 
@@ -260,9 +261,6 @@ def plot_pair_scatter(px_dist, h_ratios, penalized_dist_map, k_vals, labels_map,
 
 
 def summary_table(results, eps_values, k_vals):
-    """
-    Print a clean table showing: [k, eps] → n_groups, group_sizes, n_noise
-    """
     print("\n" + "=" * 80)
     print("DBSCAN RESULTS SUMMARY")
     print("=" * 80)
@@ -292,7 +290,7 @@ def summary_table(results, eps_values, k_vals):
 if __name__ == "__main__":
     IMAGE_PATH = '../testImage/test6.png'
     
-    # Step 1: Detect people
+    # Detect people
     print("Detecting people...")
     person_boxes, result = detect_people(IMAGE_PATH)
     print(f"Found {len(person_boxes)} people\n")
