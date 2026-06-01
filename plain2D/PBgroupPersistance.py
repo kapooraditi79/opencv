@@ -20,11 +20,11 @@ class PersistentGroupTracker:
 
     def __init__(self, fps: float, 
                 jaccard_threshold: float = 0.5,
-                min_active_threshold: float=0.5,
-                max_inactive_threshold: float=2.0,
-                grace_display_second: float= 1.0,
-                start_group_id: int=100,
-                pending_inactive_threshold: float=1.5):
+                min_active_threshold: float=0.5,        # the group needs to be seen for this many consecutive/matched frames to be confirmed
+                max_inactive_threshold: float=2.0,      # confirmed group can go unseen for this long before being deactivated
+                grace_display_second: float= 1.0,       # after deactivation, confirmed groups will look fading for this long
+                start_group_id: int=100,                
+                pending_inactive_threshold: float=1.5):     # a pending group dies faster than confirmed group.
         
         # convert seconds to frames. 
         self.fps= fps
@@ -58,9 +58,8 @@ class PersistentGroupTracker:
 
     def _get_eligible_groups(self)-> dict[int, dict]:
         """
-        returning the active groups that are okay fpr matching
+        returning the active groups that are okay for matching
         """
-
         return {
             gid: group for gid,group in self.groups.items() if group['active']==True
         }
@@ -86,10 +85,10 @@ class PersistentGroupTracker:
 
     def _is_in_grace_period(self,group:dict, current_frame: int)->bool:
         """
-        returns the fading groups. will have a fading color
+        returns the fading[confirmed-but-now-inactive] groups. will have a fading color
         """
         if group['active']:
-            return False
+            return False        # not inactive, no grace
         if not group['confirmed']:
             return False
         
@@ -115,12 +114,14 @@ class PersistentGroupTracker:
             clusters_dict[label].add(track_id)
 
         return list(clusters_dict.values())
+        # will call by update() later
 
 
     def _compute_jaccard(self, cluster:set[int], group_members:set[int])->float:
         """
         Compute Jaccard similarity between a cluster and a group.
-            
+                Measure how similar a new cluster is to an existing group's membership.
+
             J(A,B) = |A ∩ B| / |A ∪ B|
         """ 
         if not cluster or not group_members:
@@ -133,7 +134,7 @@ class PersistentGroupTracker:
 
     def _match_clusters_to_groups(self, current_clusters: list[set[int]], eligible_groups: dict[int, dict]):
         """
-            Greedy matching of clusters to groups using Jaccard similarity.
+            Greedy best-first matching between this frame's clusters and existing groups.
             
             Strategy:
             1. Compute Jaccard for every (cluster, group) pair
@@ -142,8 +143,8 @@ class PersistentGroupTracker:
             4. Only accept matches above threshold
             
             Args:
-                current_clusters: List of track ID sets from current frame
-                eligible_groups: {group_id: group_record} for active groups
+                current_clusters: list of sets, (from _build_clusters_from_labels())
+                eligible_groups: (returns confirmed /pending groups. from _get_eligible_groups())
             
             Returns:
                 List of tuples [(cluster_index, group_id, jaccard_score), ...]
@@ -211,7 +212,8 @@ class PersistentGroupTracker:
                               cluster_members: Set[int], 
                               current_frame: int) -> dict:
         """
-        Update a group that was matched to a current cluster.
+       Update a group that was successfully matched to a current-frame cluster.
+Also handles the pending->confirmed transition..
         
         Returns:
             Dict with event info: {'type': 'confirmed' or 'updated', 'group_id': group_id}
@@ -268,7 +270,6 @@ class PersistentGroupTracker:
             
             # Check if this group is active OR in grace period
             is_active = group["active"]
-            # FIXED: Pass current_frame, not group["last_seen"]
             is_grace = (not is_active and 
                        group["confirmed"] and 
                        self._is_in_grace_period(group, current_frame))
@@ -310,6 +311,9 @@ class PersistentGroupTracker:
         cluster_to_group: Dict[int, int],
         current_clusters: List[Set[int]]
     ) -> Dict[int, Optional[int]]:
+        """
+        Building the final output mapping `{track_id: group_id_or_None}` for the display layer.
+        """
 
         person_groups = {}
 
@@ -334,12 +338,15 @@ class PersistentGroupTracker:
     def _deactivate_stale_groups(self,
                              matched_group_ids: Set[int],
                              current_frame: int) -> List[int]:
-
+        """
+        the groups that were active but not matched this frame
+        and if they've been missing too long, deactivating them
+        """
         deactivated = []
 
         eligible_groups = self._get_eligible_groups()
 
-        for group_id, group in eligible_groups.items():
+        for group_id, group in eligible_groups.items():     # -> all active and pending groups
 
             if group_id in matched_group_ids:
                 continue
@@ -434,7 +441,7 @@ class PersistentGroupTracker:
         Main update method - processes one frame of data.
         
         Args:
-            track_cluster_map: {track_id: cluster_label} from DBSCAN
+            track_cluster_map: {track_id: cluster_label} OUTPUT from DBSCAN
             track_boxes: {track_id: [x1, y1, x2, y2]} for display
             current_frame: Current frame number
         
@@ -500,8 +507,6 @@ class PersistentGroupTracker:
 
         # Final combined matches
         matches = confirmed_matches + pending_matches
-
-
 
         matched_cluster_indices = {m[0] for m in matches}
         matched_group_ids = {m[1] for m in matches}

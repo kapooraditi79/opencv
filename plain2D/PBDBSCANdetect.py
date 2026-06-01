@@ -313,19 +313,18 @@ if __name__ == "__main__":
     )
     print("result dekhegi DBSCAN KE?")
     print(results)
-    # Step 5: Visualizations
+    # Visualizations
     
-    # 5a: Summary table
+    # Summary table
     summary_table(results, eps_values, k_vals)
     
-    # 5b: Distance histograms (helps pick eps range)
+    # Distance histograms (helps pick eps range)
     plot_distance_histogram(px_dist, h_ratios, penalized_dist_map, k_vals)
     
-    # 5c: Pair scatter plots with decision boundary for eps=200
+    # Pair scatter plots with decision boundary for eps=200
     plot_pair_scatter(px_dist, h_ratios, penalized_dist_map, k_vals, labels_map=None, eps_val=200)
     
-    # 5d: Visualize clusters on the actual image for each (k, eps) combination
-    # You can be selective here — maybe just the interesting ones
+    # Visualize clusters on the actual image for each (k, eps) combination
     critical_combos = [
         # (0, 150), (0, 200), (0, 250), 
         (0.5,100), (0.5, 150), (0.5, 200),
